@@ -10,18 +10,13 @@
     <meta name="apple-mobile-web-app-title" content="Health Guru" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>Health Guru</title>
-
-    <!-- OneSignal SDK -->
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <script>
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       OneSignalDeferred.push(async function(OneSignal) {
         await OneSignal.init({
-          // REPLACE THIS with your OneSignal App ID after you create your app in OneSignal
           appId: "YOUR_ONESIGNAL_APP_ID",
-          notifyButton: {
-            enable: false,
-          },
+          notifyButton: { enable: false },
           serviceWorkerPath: "/OneSignalSDKWorker.js",
         });
       });
@@ -29,6 +24,6 @@
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <script type="module" src="/main.jsx"></script>
   </body>
 </html>
