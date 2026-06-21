@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 
-// ── Data ─────────────────────────────────────────────────────────
 const AFFIRMATIONS = [
   { quote: "Short-term pain. Long-term gain. Every rep, every meal, every choice compounds.", tag: "DISCIPLINE" },
   { quote: "Health is the only wealth that can't be outsourced. Protect it like it's everything — because it is.", tag: "MINDSET" },
@@ -37,50 +36,38 @@ const FOODS = [
 ];
 
 const CATEGORY_COLORS = {
-  PROTEIN: "#FF6B35",
-  VEG: "#2ECC71",
-  CARBS: "#F4D03F",
-  FATS: "#A8E6CF",
-  RECOVERY: "#9B59B6",
-  "PROTEIN + FIBRE": "#E67E22",
-  "FLAVOUR HERO": "#BDC3C7",
+  PROTEIN: "#FF6B35", VEG: "#2ECC71", CARBS: "#F4D03F", FATS: "#A8E6CF",
+  RECOVERY: "#9B59B6", "PROTEIN + FIBRE": "#E67E22", "FLAVOUR HERO": "#BDC3C7",
 };
 
-// ── Storage helpers ───────────────────────────────────────────────
 function lsGet(key, fallback) {
   try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; }
 }
 function lsSet(key, val) {
   try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
 }
-
 function getToday() { return new Date().toISOString().split("T")[0]; }
 function getDayOfYear() {
   const n = new Date(), s = new Date(n.getFullYear(), 0, 0);
   return Math.floor((n - s) / 86400000);
 }
 
-// ── AI call ───────────────────────────────────────────────────────
 async function callAI(messages, system) {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+  const res = await fetch("/api/coach", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 1000, system, messages }),
+    body: JSON.stringify({ messages, system }),
   });
   const data = await res.json();
-  return data.content?.find(b => b.type === "text")?.text || "You've got this. Keep going.";
+  if (!res.ok) throw new Error(data.error || "API error");
+  return data.text || "You've got this. Keep going.";
 }
 
-// ── Notification helper ───────────────────────────────────────────
 async function requestNotifications() {
   if (!window.OneSignal) return false;
-  try {
-    await window.OneSignal.Notifications.requestPermission();
-    return true;
-  } catch { return false; }
+  try { await window.OneSignal.Notifications.requestPermission(); return true; } catch { return false; }
 }
 
-// ════════════════════════════════════════════════════════════════
 export default function App() {
   const [tab, setTab] = useState("home");
   const [streak, setStreak] = useState(() => lsGet("hg_streak", 0));
@@ -107,7 +94,6 @@ export default function App() {
     const newCheckins = [...checkins, today];
     const newAffIdx = (affIdx + 1) % AFFIRMATIONS.length;
     const newFoodIdx = (foodIdx + 1) % FOODS.length;
-
     setStreak(newStreak); lsSet("hg_streak", newStreak);
     setCheckins(newCheckins); lsSet("hg_checkins", newCheckins);
     setTodayDone(true); lsSet("hg_last_checkin", today);
@@ -141,7 +127,7 @@ Be concise, punchy, real. Max 3–4 sentences unless they ask for detail. No flu
       const updated = [...newChat, { role: "assistant", content: reply }];
       setChat(updated); lsSet("hg_chat", updated.slice(-20));
     } catch {
-      setChat([...newChat, { role: "assistant", content: "Connection blip. But you already know what to do. Make the right call." }]);
+      setChat([...newChat, { role: "assistant", content: "Connection issue — check back in a moment. But you already know what to do." }]);
     }
     setAiLoading(false);
   };
@@ -184,7 +170,6 @@ Bold, direct, 1-2 sentences max. No hashtags. No emoji. Pure fire.`;
 
   return (
     <div style={S.wrap}>
-      {/* Toast */}
       {toast && (
         <div style={{
           position: "fixed", top: 24, left: "50%", transform: "translateX(-50%)",
@@ -195,7 +180,6 @@ Bold, direct, 1-2 sentences max. No hashtags. No emoji. Pure fire.`;
         }}>{toast}</div>
       )}
 
-      {/* ── HOME ── */}
       {tab === "home" && (
         <div style={{ animation: "fadeIn 0.3s ease" }}>
           <div style={S.header}>
@@ -212,7 +196,6 @@ Bold, direct, 1-2 sentences max. No hashtags. No emoji. Pure fire.`;
           </div>
           <div style={S.divider} />
 
-          {/* Affirmation */}
           <div style={{ padding: "0 20px" }}>
             <div style={{ ...S.label, marginBottom: 10 }}>TODAY'S AFFIRMATION</div>
             <div style={{ ...S.card, position: "relative", overflow: "hidden", padding: "24px 20px" }}>
@@ -227,7 +210,6 @@ Bold, direct, 1-2 sentences max. No hashtags. No emoji. Pure fire.`;
             </div>
           </div>
 
-          {/* Day log */}
           <div style={{ padding: "20px 20px 0" }}>
             <div style={{ ...S.label, marginBottom: 10 }}>TODAY'S LOG</div>
             <div style={S.card}>
@@ -238,8 +220,7 @@ Bold, direct, 1-2 sentences max. No hashtags. No emoji. Pure fire.`;
               ].map(({ key, label, emoji }, i, arr) => (
                 <div key={key} onClick={() => toggleLog(key)} style={{
                   display: "flex", alignItems: "center", justifyContent: "space-between",
-                  padding: "14px 0", borderBottom: i < arr.length - 1 ? "1px solid #111" : "none",
-                  cursor: "pointer",
+                  padding: "14px 0", borderBottom: i < arr.length - 1 ? "1px solid #111" : "none", cursor: "pointer",
                 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     <span style={{ fontSize: 20 }}>{emoji}</span>
@@ -257,7 +238,6 @@ Bold, direct, 1-2 sentences max. No hashtags. No emoji. Pure fire.`;
             </div>
           </div>
 
-          {/* Lock in */}
           <div style={{ padding: "16px 20px 0" }}>
             <button onClick={handleCheckin} disabled={todayDone} style={{
               width: "100%", padding: "18px 0",
@@ -265,14 +245,12 @@ Bold, direct, 1-2 sentences max. No hashtags. No emoji. Pure fire.`;
               color: todayDone ? "#333" : "#000",
               border: todayDone ? "1px solid #1a1a1a" : "none",
               borderRadius: 16, fontSize: 15, fontWeight: 800,
-              letterSpacing: 2, cursor: todayDone ? "default" : "pointer",
-              transition: "all 0.2s",
+              letterSpacing: 2, cursor: todayDone ? "default" : "pointer", transition: "all 0.2s",
             }}>{todayDone ? `✓ DAY ${streak} LOCKED IN` : "LOCK IN TODAY ↗"}</button>
           </div>
 
-          {/* IF Window */}
           <div style={{ padding: "16px 20px 0" }}>
-            <div style={{ ...S.card }}>
+            <div style={S.card}>
               <div style={{ ...S.label, marginBottom: 12 }}>YOUR EATING WINDOW</div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div style={{ textAlign: "center" }}>
@@ -292,21 +270,18 @@ Bold, direct, 1-2 sentences max. No hashtags. No emoji. Pure fire.`;
             </div>
           </div>
 
-          {/* Notifications CTA */}
           {!notifEnabled && (
             <div style={{ padding: "16px 20px 0" }}>
               <button onClick={enableNotifications} style={{
-                width: "100%", padding: "14px 0",
-                background: "transparent", border: "1px solid #222",
-                color: "#555", borderRadius: 16, fontSize: 13,
-                fontWeight: 600, letterSpacing: 1, cursor: "pointer",
+                width: "100%", padding: "14px 0", background: "transparent",
+                border: "1px solid #222", color: "#555", borderRadius: 16,
+                fontSize: 13, fontWeight: 600, letterSpacing: 1, cursor: "pointer",
               }}>🔔 ENABLE DAILY NOTIFICATIONS</button>
             </div>
           )}
         </div>
       )}
 
-      {/* ── FUEL ── */}
       {tab === "fuel" && (
         <div style={{ animation: "fadeIn 0.3s ease" }}>
           <div style={S.header}>
@@ -314,7 +289,6 @@ Bold, direct, 1-2 sentences max. No hashtags. No emoji. Pure fire.`;
             <div style={S.title}>FOOD INTEL</div>
           </div>
           <div style={S.divider} />
-
           <div style={{ padding: "0 20px" }}>
             <div style={{ ...S.label, marginBottom: 10 }}>TODAY'S POWER FOOD</div>
             <div style={{ background: "#0a0a0a", border: `1px solid ${catColor}33`, borderRadius: 20, padding: "28px 24px", position: "relative", overflow: "hidden" }}>
@@ -333,7 +307,6 @@ Bold, direct, 1-2 sentences max. No hashtags. No emoji. Pure fire.`;
               </div>
             </div>
           </div>
-
           <div style={{ padding: "24px 20px 0" }}>
             <div style={{ ...S.label, marginBottom: 12 }}>YOUR ARSENAL</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -353,7 +326,6 @@ Bold, direct, 1-2 sentences max. No hashtags. No emoji. Pure fire.`;
         </div>
       )}
 
-      {/* ── COACH ── */}
       {tab === "coach" && (
         <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 80px)", animation: "fadeIn 0.3s ease" }}>
           <div style={S.header}>
@@ -362,7 +334,6 @@ Bold, direct, 1-2 sentences max. No hashtags. No emoji. Pure fire.`;
             <div style={{ fontSize: 13, color: "#444", marginTop: 4 }}>Streak: {streak} days · IF 16:8 · HIIT warrior</div>
           </div>
           <div style={S.divider} />
-
           <div style={{ flex: 1, overflowY: "auto", padding: "0 20px" }}>
             {chat.length === 0 && (
               <div style={{ color: "#444", fontSize: 14, lineHeight: 1.9 }}>
@@ -374,8 +345,7 @@ Bold, direct, 1-2 sentences max. No hashtags. No emoji. Pure fire.`;
             {chat.map((msg, i) => (
               <div key={i} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start", marginBottom: 12 }}>
                 <div style={{
-                  maxWidth: "85%",
-                  background: msg.role === "user" ? S.orange : "#111",
+                  maxWidth: "85%", background: msg.role === "user" ? S.orange : "#111",
                   color: msg.role === "user" ? "#000" : "#ddd",
                   borderRadius: msg.role === "user" ? "20px 20px 4px 20px" : "20px 20px 20px 4px",
                   padding: "12px 16px", fontSize: 14, lineHeight: 1.6,
@@ -391,7 +361,6 @@ Bold, direct, 1-2 sentences max. No hashtags. No emoji. Pure fire.`;
               </div>
             )}
           </div>
-
           {chat.length === 0 && (
             <div style={{ padding: "0 20px 12px" }}>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -404,30 +373,20 @@ Bold, direct, 1-2 sentences max. No hashtags. No emoji. Pure fire.`;
               </div>
             </div>
           )}
-
           <div style={{ padding: "12px 20px", borderTop: "1px solid #111", display: "flex", gap: 10 }}>
-            <input
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && sendChat()}
+            <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && sendChat()}
               placeholder="Talk to your coach..."
-              style={{
-                flex: 1, background: "#0a0a0a", border: "1px solid #1a1a1a",
-                borderRadius: 24, padding: "12px 18px", color: "#fff",
-                fontSize: 14, outline: "none",
-              }}
+              style={{ flex: 1, background: "#0a0a0a", border: "1px solid #1a1a1a", borderRadius: 24, padding: "12px 18px", color: "#fff", fontSize: 14, outline: "none" }}
             />
             <button onClick={sendChat} disabled={aiLoading || !input.trim()} style={{
-              background: input.trim() ? S.orange : "#111", border: "none",
-              borderRadius: "50%", width: 46, height: 46, cursor: "pointer",
-              fontSize: 20, transition: "all 0.2s", display: "flex",
-              alignItems: "center", justifyContent: "center", color: "#000",
+              background: input.trim() ? S.orange : "#111", border: "none", borderRadius: "50%",
+              width: 46, height: 46, cursor: "pointer", fontSize: 20, transition: "all 0.2s",
+              display: "flex", alignItems: "center", justifyContent: "center", color: "#000",
             }}>↗</button>
           </div>
         </div>
       )}
 
-      {/* ── STREAKS ── */}
       {tab === "streaks" && (
         <div style={{ animation: "fadeIn 0.3s ease" }}>
           <div style={S.header}>
@@ -435,7 +394,6 @@ Bold, direct, 1-2 sentences max. No hashtags. No emoji. Pure fire.`;
             <div style={S.title}>YOUR RECORD</div>
           </div>
           <div style={S.divider} />
-
           <div style={{ textAlign: "center", padding: "36px 20px" }}>
             <div style={{ fontSize: 100, fontWeight: 900, color: S.orange, lineHeight: 1, letterSpacing: -4, textShadow: "0 0 80px rgba(255,107,53,0.25)" }}>{streak}</div>
             <div style={{ fontSize: 12, letterSpacing: 4, color: "#444", marginTop: 8, fontWeight: 700 }}>DAY STREAK</div>
@@ -443,7 +401,6 @@ Bold, direct, 1-2 sentences max. No hashtags. No emoji. Pure fire.`;
             {streak >= 7 && streak < 30 && <div style={{ fontSize: 13, color: "#2ECC71", marginTop: 12, fontWeight: 600 }}>🏆 One week strong. Most people quit before this.</div>}
             {streak === 0 && <div style={{ fontSize: 13, color: "#444", marginTop: 12 }}>Check in today to start your streak.</div>}
           </div>
-
           <div style={{ padding: "0 20px" }}>
             <div style={{ ...S.label, marginBottom: 14 }}>MILESTONES</div>
             {[
@@ -474,7 +431,6 @@ Bold, direct, 1-2 sentences max. No hashtags. No emoji. Pure fire.`;
               </div>
             ))}
           </div>
-
           <div style={{ padding: "24px 20px 0" }}>
             <div style={{ ...S.label, marginBottom: 14 }}>LAST 14 DAYS</div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -496,12 +452,10 @@ Bold, direct, 1-2 sentences max. No hashtags. No emoji. Pure fire.`;
         </div>
       )}
 
-      {/* ── NAV ── */}
       <div style={{
         position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
         width: "100%", maxWidth: 480, background: "#000",
-        borderTop: "1px solid #111", display: "flex", padding: "10px 0 20px",
-        zIndex: 100,
+        borderTop: "1px solid #111", display: "flex", padding: "10px 0 20px", zIndex: 100,
       }}>
         {[
           { key: "home", icon: "⊕", label: "HOME" },
@@ -518,6 +472,16 @@ Bold, direct, 1-2 sentences max. No hashtags. No emoji. Pure fire.`;
           </button>
         ))}
       </div>
+
+      <style>{`
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body, #root { height: 100%; background: #000; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+        ::-webkit-scrollbar { display: none; }
+        input::placeholder { color: #333; }
+        @keyframes pulse { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } }
+        @keyframes fadeInDown { from { opacity: 0; transform: translateX(-50%) translateY(-12px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+      `}</style>
     </div>
   );
 }
